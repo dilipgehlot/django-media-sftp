@@ -1,0 +1,64 @@
+
+Get media folder directly from sft folder.
+
+1. pip install django-storages
+
+2. INSTALLED_APPS = [
+   .....
+    'storages', ]
+    
+3.Setting.py 
+ 
+ 
+SFTP_STORAGE_HOST = ''
+SFTP_STORAGE_ROOT = ''
+
+SFTP_STORAGE_PARAMS = {
+    'username': '',
+    'password': '',
+    'allow_agent': False,
+    'look_for_keys': False,
+}
+
+
+3.CustomMiddleware, create SFTPMiddleware.py file 
+
+import mimetypes
+
+from storages.backends.sftpstorage import SFTPStorage
+from django.http import HttpResponse
+
+
+class SFTPMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+        # One-time configuration and initialization.
+
+    def __call__(self, request):
+       
+        SFS = SFTPStorage()
+        
+        response = self.get_response(request)
+
+        path = request.get_full_path()      
+        
+        if "/media/" in path: 
+            path=path.replace("/media/","") 
+            print('media path exists: ',SFS.exists(path))
+            if SFS.exists(path):
+                file = SFS._read(path)
+                type, encoding = mimetypes.guess_type(path)
+                response = HttpResponse(file, content_type=type)
+                response['Content-Disposition'] = u'attachment; filename="{filename}"'.format(filename=path)
+
+        return response
+    
+    
+   4. add in settign.py
+   MIDDLEWARE = [
+     .......
+    CustomMiddlewareSftpStorage.SFTPMiddleware'  #path to the middleware file
+]
+
+  
+ 
